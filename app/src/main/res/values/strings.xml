@@ -1,0 +1,13 @@
+<resources>
+    <string name="app_name">PocBlinkIdInovatrics</string>
+    <!-- Strings used for fragments for navigation -->
+    <string name="first_fragment_label">Inovatrics</string>
+    <string name="second_fragment_label">BlinkId</string>
+    <string name="scan">Scan</string>
+    <string name="takePhoto">Take Photo</string>
+    <string name="next">To BlinkId</string>
+    <string name="previous">To Inovatrics</string>
+
+    <string name="hello_first_fragment">Hello Inovatrics</string>
+    <string name="hello_second_fragment">Hello BlinkId</string>
+</resources>
