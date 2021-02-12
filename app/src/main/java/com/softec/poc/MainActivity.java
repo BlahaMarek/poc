@@ -1,9 +1,6 @@
 package com.softec.poc;
 
 import android.Manifest;
-import android.app.Activity;
-import android.app.AlertDialog;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
@@ -11,53 +8,86 @@ import android.graphics.BitmapFactory;
 import android.os.Bundle;
 
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
-import com.microblink.MicroblinkSDK;
 import com.microblink.directApi.DirectApiErrorListener;
 import com.microblink.directApi.RecognizerRunner;
-import com.microblink.entities.Entity;
-import com.microblink.entities.recognizers.Recognizer;
 import com.microblink.entities.recognizers.RecognizerBundle;
 import com.microblink.entities.recognizers.blinkid.generic.BlinkIdCombinedRecognizer;
-import com.microblink.entities.recognizers.blinkid.generic.BlinkIdRecognizer;
-import com.microblink.entities.recognizers.blinkid.mrtd.MrtdRecognizer;
-import com.microblink.entities.recognizers.blinkid.mrtd.MrzResult;
+import com.microblink.entities.recognizers.blinkid.imageoptions.FaceImageOptions;
+import com.microblink.entities.recognizers.blinkid.imageoptions.FullDocumentImageOptions;
 import com.microblink.hardware.orientation.Orientation;
 import com.microblink.recognition.RecognitionSuccessType;
 import com.microblink.view.recognition.ScanResultListener;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
 import android.util.Log;
 import android.view.View;
+import android.widget.ImageView;
 import android.widget.Toast;
 
 import java.io.IOException;
-import java.io.InputStream;
 
 
 public class MainActivity extends AppCompatActivity {
 
-    private static final int MY_REQUEST_CODE = 1337;
-    private static final int PERMISSION_REQUEST_CODE = 235;
     private RecognizerRunner mRecognizerRunner;
-    private BlinkIdRecognizer mRecognizer;
+    private BlinkIdCombinedRecognizer mRecognizer;
     private RecognizerBundle mRecognizerBundle;
 
     private static final Bitmap.Config BITMAP_CONFIG = Bitmap.Config.ARGB_8888;
-    private static final String ASSETS_BITMAP_NAME = "croID.jpg";
+    private static final int CAMERA_PIC_REQUEST = 1337;
+    private static final String[] CAMERA_PERMISSION = new String[]{Manifest.permission.CAMERA};
+    private static final int CAMERA_REQUEST_CODE = 10;
     private Bitmap mBitmap;
-
+    ImageView img_front;
+    Bitmap bitmap_front;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        img_front = findViewById(R.id.img);
+        FloatingActionButton send = findViewById(R.id.send);
+        FloatingActionButton fab = findViewById(R.id.fab);
 
-        mRecognizer = new BlinkIdRecognizer();
-        MrtdRecognizer mrtdRecognizer = new MrtdRecognizer();
-        mRecognizerBundle = new RecognizerBundle(mrtdRecognizer);
-//        mRecognizerBundle = new RecognizerBundle(mRecognizer);
+        fab.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if (hasCameraPermission()) {
+                    startActivityForResult(new Intent(MainActivity.this, CameraActivity.class),CAMERA_PIC_REQUEST);
+                } else {
+                    requestPermission();
+                }
+            }
+        });
+
+        send.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+//                startMicroblink();
+
+                startInovatrics();
+
+            }
+        });
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        mRecognizer = new BlinkIdCombinedRecognizer();
+        if(mRecognizer instanceof FullDocumentImageOptions) {
+            FullDocumentImageOptions options = (FullDocumentImageOptions) mRecognizer;
+            options.setReturnFullDocumentImage(true);
+        }
+        if(mRecognizer instanceof FaceImageOptions) {
+            FaceImageOptions options = (FaceImageOptions) mRecognizer;
+            options.setReturnFaceImage(true);
+        }
+        mRecognizerBundle = new RecognizerBundle(mRecognizer);
         mRecognizerRunner = RecognizerRunner.getSingletonInstance();
 
         mRecognizerRunner.initialize(this, mRecognizerBundle, new DirectApiErrorListener() {
@@ -67,77 +97,21 @@ public class MainActivity extends AppCompatActivity {
                 finish();
             }
         });
-        //androidCameraX
-
-        FloatingActionButton fab = findViewById(R.id.fab);
-        fab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Toast.makeText(MainActivity.this, "Fab clicked", Toast.LENGTH_SHORT).show();
-
-            }
-        });
-    }
-
-
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        // start recognition
-        InputStream istr = null;
-        try {
-            istr = getAssets().open(ASSETS_BITMAP_NAME);
-            // load initial bitmap from assets
-            BitmapFactory.Options options = new BitmapFactory.Options();
-            options.inPreferredConfig = BITMAP_CONFIG;
-            mBitmap = BitmapFactory.decodeStream(istr, null, options);
-            mRecognizerRunner.recognizeBitmap(mBitmap, Orientation.ORIENTATION_LANDSCAPE_RIGHT, mScanResultListener);
-
-            } catch (Error | IOException e) {
-            Toast.makeText(MainActivity.this, "Fokin", Toast.LENGTH_SHORT).show();
-        }
-
     }
 
     private final ScanResultListener mScanResultListener = new ScanResultListener() {
         @Override
         public void onScanningDone(@NonNull RecognitionSuccessType recognitionSuccessType) {
-            // this method is from ScanResultListener and will be called
-            // when scanning completes
-            // you can obtain scanning result by calling getResult on each
-            // recognizer that you bundled into RecognizerBundle.
-            // for example:
-            Log.d("blahos", "blahos: ");
-
-
-            BlinkIdRecognizer.Result result = mRecognizer.getResult();
-            if (result.getResultState() == Recognizer.Result.State.Valid) {
-                // result is valid, you can use it however you wish
-            }
+            BlinkIdCombinedRecognizer.Result result = mRecognizer.getResult();
             if (recognitionSuccessType != RecognitionSuccessType.UNSUCCESSFUL) {
-                // return results (if successful or partial)
-                finish();
+                Log.d("s", "onScanningDone: ");
             } else {
                 Toast.makeText(MainActivity.this, "Nothing scanned!", Toast.LENGTH_SHORT).show();
-                // enable button again
             };
-
-            Recognizer recognizer = mRecognizerBundle.getRecognizers()[0];
-            Entity.Result resultt = recognizer.getResult();
-            if (!(resultt instanceof MrtdRecognizer.Result)) {
-                Toast.makeText(MainActivity.this, "Nothing scanned!", Toast.LENGTH_SHORT).show();
-                return;
-            }
-
-            MrzResult mrzResult = ((MrtdRecognizer.Result)resultt).getMrzResult();
-            String scanResults =
-                    "First name: " + mrzResult.getSecondaryId() +
-                            "\nLast name: " + mrzResult.getPrimaryId();
         }
         @Override
         public void onUnrecoverableError(@NonNull Throwable var1) {
-            Log.d("dlahos", "dlahos");
+            Toast.makeText(MainActivity.this, "Error! Nothing scanned!", Toast.LENGTH_SHORT).show();
         }
     };
 
@@ -145,8 +119,46 @@ public class MainActivity extends AppCompatActivity {
     protected void onStop() {
         super.onStop();
         if (mRecognizerRunner != null) {
-            // terminate the native library
             mRecognizerRunner.terminate();
         }
     }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data)
+    {
+       if (requestCode == CAMERA_PIC_REQUEST){
+           BitmapFactory.Options options = new BitmapFactory.Options();
+           options.inPreferredConfig = BITMAP_CONFIG;
+           bitmap_front = BitmapFactory.decodeFile(data.getData().toString(), options);
+           img_front.setImageBitmap(bitmap_front);
+       }
+        super.onActivityResult(requestCode, resultCode, data);
+    }
+
+    private boolean hasCameraPermission() {
+        return ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED;
+    }
+
+    private void requestPermission() {
+        ActivityCompat.requestPermissions(this, CAMERA_PERMISSION, CAMERA_REQUEST_CODE );
+    }
+
+    private void startMicroblink() {
+        try {
+            BitmapFactory.Options options = new BitmapFactory.Options();
+            options.inPreferredConfig = BITMAP_CONFIG;
+
+            mBitmap = BitmapFactory.decodeStream(getAssets().open("back.jpg"), null, options);
+
+            mRecognizerRunner.recognizeBitmap(bitmap_front, Orientation.ORIENTATION_LANDSCAPE_RIGHT, mScanResultListener);
+
+        } catch (Error | IOException e) {
+            Toast.makeText(MainActivity.this, "Fokin", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void startInovatrics() {
+        String url = "http://ocrpoc.softec.sk:9001/";
+    }
+
 }

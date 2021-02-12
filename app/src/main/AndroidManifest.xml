@@ -12,9 +12,12 @@
         android:supportsRtl="true"
         android:name=".MyApplication"
         android:theme="@style/Theme.Poc">
-
+        <activity android:name=".CameraActivity"
+            android:screenOrientation="portrait"
+            />
         <activity
             android:name=".MainActivity"
+            android:screenOrientation="portrait"
             android:label="@string/app_name"
             android:theme="@style/Theme.Poc.NoActionBar">
             <intent-filter>
@@ -27,11 +30,11 @@
             android:name="com.softec.poc.ScanImageActivity"
             android:screenOrientation="portrait" />
     </application>
+    <uses-feature android:name="android.hardware.camera.any" />
     <uses-permission android:name="android.permission.CAMERA" />
-    <uses-permission android:name="android.permission.FLASHLIGHT" />
-    <uses-feature android:name="android.hardware.camera" />
     <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
     <uses-feature android:name="android.hardware.camera.flash" android:required="false" />
     <supports-screens android:anyDensity="true" android:largeScreens="true" android:normalScreens="true" android:resizeable="true" android:smallScreens="true" />
-
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
 </manifest>
